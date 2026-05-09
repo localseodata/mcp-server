@@ -1,0 +1,39 @@
+{
+  "name": "@localseodata/mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for Local SEO Data. Gives AI assistants access to 42 local SEO tools.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/localseodata/mcp-server.git"
+  },
+  "homepage": "https://localseodata.com/docs/mcp-server",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "local-seo",
+    "seo",
+    "ai",
+    "claude",
+    "cursor",
+    "google-business-profile"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "hono": "^4.6.16",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
