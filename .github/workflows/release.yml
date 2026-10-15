@@ -2,8 +2,10 @@ name: Release
 
 # Push a tag like v1.1.0 to publish that version to npm and the MCP Registry.
 # The tag must match the version in package.json and server.json.
-# Needs the NPM_TOKEN repository secret. The MCP Registry login uses
-# GitHub OIDC, so it needs no secret.
+# Both publishes authenticate with GitHub OIDC, so no secrets are needed.
+# npm must list this workflow as a trusted publisher for the package
+# (npmjs.com → package Settings → Trusted Publisher → GitHub Actions,
+# repository localseodata/mcp-server, workflow release.yml).
 
 on:
   push:
@@ -17,8 +19,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -39,10 +41,10 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@^11.5.1
       - name: Publish to npm
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
 
       - name: Install mcp-publisher
         run: |
