@@ -1,6 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { callApi, callApiGet, formatResult, withErrorHandling } from "../api-client.js";
+import {
+  reputationAuditDataSchema,
+  citationAuditDataSchema,
+} from "../schemas/audit.js";
 
 const READ_ONLY = {
   readOnlyHint: true,
@@ -8,7 +12,6 @@ const READ_ONLY = {
   openWorldHint: true,
 } as const;
 
-/** Poll an async job until complete or failed. Returns the final data. */
 async function pollAsyncJob(
   pollUrl: string,
   auth: string,
@@ -28,7 +31,6 @@ async function pollAsyncJob(
     if (data.status === "failed") {
       throw new Error((data.error as string) || "Audit job failed");
     }
-    // Still pending/running — increase delay up to 4s
     delay = Math.min(delay * 1.3, 4000);
   }
 
@@ -36,16 +38,17 @@ async function pollAsyncJob(
 }
 
 export function registerAuditTools(server: McpServer, getAuth: () => string) {
-  server.tool(
+  server.registerTool(
     "local_audit",
-    "Run a comprehensive local SEO audit. Checks local pack position, organic rankings, profile completeness, review velocity, and competitors. Returns actionable recommendations. Costs 50 credits. This runs as an async job and may take 15-45 seconds.",
     {
-      business_name: z.string().describe("Business name"),
-      location: z.string().describe("City and state"),
+      description: "Use when running a comprehensive local SEO check: SERP + profile + reviews + competitors in one call. Returns local_pack_position, organic_positions, rating, reviews_count, profile_completeness, review_velocity, competitors, and recommendations. Expensive (50 credits) -- confirm with user first. Async, takes 15-45 seconds.",
+      inputSchema: {
+        business_name: z.string().describe("Business name"),
+        location: z.string().describe("City and state"),
+      },
+      annotations: { ...READ_ONLY, title: "Comprehensive Local SEO Audit" },
     },
-    READ_ONLY,
     withErrorHandling(async ({ business_name, location }) => {
-      // Submit the job
       const submitResult = await callApi(
         "/v1/audit/local",
         { business_name, location },
@@ -54,26 +57,33 @@ export function registerAuditTools(server: McpServer, getAuth: () => string) {
       );
       const submitData = submitResult.data as Record<string, unknown>;
 
-      // If cached result returned directly (no job_id), return immediately
       if (!submitData.job_id) {
-        return { content: [{ type: "text" as const, text: formatResult(submitResult.data, submitResult) }] };
+        return {
+          content: [{ type: "text" as const, text: formatResult(submitResult.data, submitResult) }],
+          structuredContent: submitResult.data as Record<string, unknown>,
+        };
       }
 
-      // Poll for completion
       const pollUrl = submitData.poll_url as string;
       const result = await pollAsyncJob(pollUrl, getAuth());
-      return { content: [{ type: "text" as const, text: formatResult(result.data, result) }] };
+      return {
+        content: [{ type: "text" as const, text: formatResult(result.data, result) }],
+        structuredContent: result.data as Record<string, unknown>,
+      };
     })
   );
 
-  server.tool(
+  server.registerTool(
     "reputation_audit",
-    "Audit online reputation across review platforms. Returns a reputation score, sentiment analysis (positive/negative themes), response rate, and recommendations. Costs 30 credits. Note: this tool queries multiple review sources and may take 10-30 seconds to return — this is normal, not an error.",
     {
-      business_name: z.string().describe("Business name"),
-      location: z.string().describe("City and state"),
+      description: "Use when analyzing cross-platform review reputation with sentiment. Returns reputation_score, per-platform ratings, sentiment themes, response_rate, and recommendations. Costs 30 credits. May take 10-30 seconds.",
+      inputSchema: {
+        business_name: z.string().describe("Business name"),
+        location: z.string().describe("City and state"),
+      },
+      outputSchema: reputationAuditDataSchema,
+      annotations: { ...READ_ONLY, title: "Reputation Audit" },
     },
-    READ_ONLY,
     withErrorHandling(async ({ business_name, location }) => {
       const result = await callApi(
         "/v1/audit/reputation",
@@ -81,27 +91,42 @@ export function registerAuditTools(server: McpServer, getAuth: () => string) {
         getAuth(),
         120_000
       );
-      return { content: [{ type: "text" as const, text: formatResult(result.data, result) }] };
+      return {
+        content: [{ type: "text" as const, text: formatResult(result.data, result) }],
+        structuredContent: result.data as Record<string, unknown>,
+      };
     })
   );
 
-  server.tool(
+  server.registerTool(
     "citation_audit",
-    "Check NAP (Name, Address, Phone) consistency across 20 major directories like Yelp, BBB, Facebook, and YellowPages. Returns consistency score and per-directory details. Costs 50 credits.",
     {
-      business_name: z.string().describe("Business name"),
-      address: z.string().describe("Full business address"),
-      phone: z.string().describe("Business phone number"),
+      description: "Use when checking NAP (Name, Address, Phone) consistency across business directories (Yelp, BBB, Facebook, YellowPages, Angi, Houzz, Trustpilot and more). Returns consistency_score (0-100 partial-credit average over found listings; null when no listings found) and per-directory match details. Match fields are true (verified), false (conflicting value found), or null (listing found but the field isn't visible in search data, so it can't be verified). Every directory selected is scanned whether or not a listing exists there, so directories_checked always equals what was requested -- a business listed on only a handful still returns a row per directory. Scans the top 20 directories by default (50 credits); `directories` takes a count up to 50 or an explicit list of directory names, and costs 2.5 credits each (all 50 = 125 credits). Expensive -- confirm with user first.",
+      inputSchema: {
+        business_name: z.string().describe("Business name"),
+        address: z.string().describe("Full business address"),
+        phone: z.string().describe("Business phone number"),
+        directories: z
+          .union([z.number().int().min(1).max(50), z.array(z.string()).min(1).max(50)])
+          .optional()
+          .describe(
+            "How much to scan, at 2.5 credits per directory. A number takes the top N of 50 (default 20 = 50 credits; 50 = 125 credits), or pass exact directory names e.g. [\"yelp\", \"bbb\", \"houzz\"]"
+          ),
+      },
+      outputSchema: citationAuditDataSchema,
+      annotations: { ...READ_ONLY, title: "Citation / NAP Consistency Audit" },
     },
-    READ_ONLY,
-    withErrorHandling(async ({ business_name, address, phone }) => {
+    withErrorHandling(async ({ business_name, address, phone, directories }) => {
       const result = await callApi(
         "/v1/audit/citation",
-        { business_name, address, phone },
+        { business_name, address, phone, ...(directories ? { directories } : {}) },
         getAuth(),
         120_000
       );
-      return { content: [{ type: "text" as const, text: formatResult(result.data, result) }] };
+      return {
+        content: [{ type: "text" as const, text: formatResult(result.data, result) }],
+        structuredContent: result.data as Record<string, unknown>,
+      };
     })
   );
 }

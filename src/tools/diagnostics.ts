@@ -9,15 +9,16 @@ const READ_ONLY = {
 } as const;
 
 export function registerDiagnosticTools(server: McpServer, getAuth: () => string) {
-  server.tool(
+  server.registerTool(
     "ping",
-    "Test connectivity and auth. Verifies the API key works end-to-end by making a lightweight call to the backend API health endpoint with your credentials. Use this to diagnose connection or authentication issues.",
-    {},
-    READ_ONLY,
+    {
+      description: "Use when diagnosing connection or authentication issues. Tests API connectivity end-to-end by verifying the API key against the backend. Free (0 credits).",
+      annotations: { ...READ_ONLY, title: "Connection Diagnostics" },
+    },
     async () => {
       const lines: string[] = [];
+      let failed = false;
 
-      // Check auth header
       let authHeader: string;
       let rawKey: string;
       try {
@@ -38,24 +39,15 @@ export function registerDiagnosticTools(server: McpServer, getAuth: () => string
 
       lines.push(`API base URL: ${env.API_BASE_URL}`);
 
-      // Test 1: Health endpoint (unauthenticated)
       try {
         const healthRes = await fetch(`${env.API_BASE_URL}/health`);
         lines.push(`Health check: ${healthRes.status} ${healthRes.statusText}`);
+        if (!healthRes.ok) failed = true;
       } catch (err) {
         lines.push(`Health check FAILED: ${err instanceof Error ? err.message : String(err)}`);
+        failed = true;
       }
 
-      // Test 2: Direct key validation (bypasses auth middleware)
-      try {
-        const debugRes = await fetch(`${env.API_BASE_URL}/debug/auth-test?key=${encodeURIComponent(rawKey)}`);
-        const debugText = await debugRes.text();
-        lines.push(`Direct validation: ${debugRes.status} — ${debugText.slice(0, 300)}`);
-      } catch (err) {
-        lines.push(`Direct validation FAILED: ${err instanceof Error ? err.message : String(err)}`);
-      }
-
-      // Test 3: Authenticated call through middleware
       try {
         const res = await fetch(`${env.API_BASE_URL}/v1/account/balance`, {
           method: "GET",
@@ -75,15 +67,16 @@ export function registerDiagnosticTools(server: McpServer, getAuth: () => string
           } catch { /* ignore parse errors */ }
         } else {
           lines.push(`Auth middleware: FAILED ${res.status} — ${text.slice(0, 300)}`);
+          failed = true;
         }
       } catch (err) {
         lines.push(`Auth middleware error: ${err instanceof Error ? err.message : String(err)}`);
+        failed = true;
       }
 
-      const hasError = lines.some((l) => l.includes("FAILED") || l.includes("error"));
       return {
         content: [{ type: "text" as const, text: lines.join("\n") }],
-        ...(hasError && { isError: true }),
+        ...(failed && { isError: true }),
       };
     }
   );
