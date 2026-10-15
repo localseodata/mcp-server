@@ -2,6 +2,8 @@ name: Release
 
 # Push a tag like v1.1.0 to publish that version to npm and the MCP Registry.
 # The tag must match the version in package.json and server.json.
+# It can also be run by hand from the Actions tab ("Run workflow"), which
+# publishes the version in package.json from the chosen branch.
 # Both publishes authenticate with GitHub OIDC, so no secrets are needed.
 # npm must list this workflow as a trusted publisher for the package
 # (npmjs.com → package Settings → Trusted Publisher → GitHub Actions,
@@ -10,6 +12,7 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,14 +29,16 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
 
-      - name: Check tag matches package.json and server.json
+      - name: Check versions match
         run: |
-          tag="${GITHUB_REF_NAME#v}"
           pkg=$(node -p "require('./package.json').version")
           srv=$(node -p "require('./server.json').version")
           srv_pkg=$(node -p "require('./server.json').packages[0].version")
-          if [ "$tag" != "$pkg" ] || [ "$tag" != "$srv" ] || [ "$tag" != "$srv_pkg" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json ($pkg) / server.json ($srv, $srv_pkg)"
+          # A tag push must match the files; a manual run publishes package.json's version.
+          want="$pkg"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then want="${GITHUB_REF_NAME#v}"; fi
+          if [ "$want" != "$pkg" ] || [ "$want" != "$srv" ] || [ "$want" != "$srv_pkg" ]; then
+            echo "::error::Versions disagree: expected $want, package.json $pkg, server.json $srv / $srv_pkg"
             exit 1
           fi
 
