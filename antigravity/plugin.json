@@ -1,0 +1,21 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "local-seo-data",
+  "displayName": "Local SEO Data",
+  "version": "1.0.0",
+  "description": "Google local pack and Maps rankings, Business Profiles, reviews, local SEO audits, keyword research, geogrid scans and AI visibility for any business.",
+  "logo": "assets/logo.png",
+  "suggestedPrompts": [
+    "Who's in the Google local pack for \"plumber\" in Austin, TX?",
+    "Summarize the newest Google reviews for a business in my city",
+    "Run a local SEO audit for my business and list the top fixes"
+  ],
+  "author": {
+    "name": "Local SEO Data",
+    "url": "https://localseodata.com"
+  },
+  "homepage": "https://localseodata.com/docs/mcp-server",
+  "repository": "https://github.com/localseodata/mcp-server",
+  "license": "MIT",
+  "keywords": ["local seo data", "localseodata", "local seo", "google business profile", "local pack", "geogrid"]
+}

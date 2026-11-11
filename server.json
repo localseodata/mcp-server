@@ -6,17 +6,31 @@
     "url": "https://github.com/localseodata/mcp-server",
     "source": "github"
   },
-  "version": "1.1.0",
+  "version": "1.1.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@localseodata/mcp-server",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "transport": {
         "type": "streamable-http",
         "url": "https://mcp.localseodata.com/mcp"
       },
       "environmentVariables": []
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.localseodata.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Optional. Clients that support OAuth sign in with a Local SEO Data account and need no header. Otherwise send an API key from localseodata.com/dashboard/keys as Bearer sk_live_...",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
     }
   ]
 }

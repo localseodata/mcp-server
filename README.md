@@ -159,6 +159,19 @@ npm test           # Run tests
 npm run build      # Compile to dist/
 ```
 
+## Marketplace plugins
+
+The same hosted server is packaged as a plugin for several agent marketplaces. Each package holds a manifest, the MCP config for `https://mcp.localseodata.com/mcp` and one skill; none of them runs local code.
+
+| Folder | Marketplace |
+|---|---|
+| `grok/` | xAI Grok Build plugin marketplace (catalog entry pins a commit on `main`) |
+| `cursor/` (listed by `.cursor-plugin/marketplace.json`) | Cursor Marketplace |
+| `antigravity/` | Google Antigravity Plugin Marketplace |
+| `gemini-extension.json` + `gemini/` | Gemini CLI extensions gallery (manifest must sit at the repo root) |
+
+The skill is copied into each package. Edit `grok/skills/local-seo-data/SKILL.md` and copy it to the others; `src/plugins.test.ts` fails if any copy, endpoint or plugin name drifts.
+
 ## License
 
 MIT

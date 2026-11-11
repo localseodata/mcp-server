@@ -1,0 +1,16 @@
+{
+  "name": "local-seo-data",
+  "owner": {
+    "name": "Local SEO Data"
+  },
+  "metadata": {
+    "description": "The Local SEO Data plugin for Cursor."
+  },
+  "plugins": [
+    {
+      "name": "local-seo-data",
+      "source": "cursor",
+      "description": "Live local search data from Local SEO Data: rankings, Business Profiles, reviews, audits, keyword research, geogrid scans and AI visibility."
+    }
+  ]
+}
