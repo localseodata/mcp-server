@@ -6,8 +6,10 @@ process.env.OAUTH_ISSUER = "https://localseodata.test";
 process.env.MCP_RESOURCE_URL = "https://mcp.localseodata.test/mcp";
 process.env.MCP_SERVER_SECRET = "mcp-server-secret-for-tests";
 
-const { oauthChallenge, isUnexpiredAccessToken, protectedResourceMetadata, validateApiKey, wwwAuthenticate } =
-  await import("./auth.js");
+const {
+  oauthChallenge, isUnexpiredAccessToken, protectedResourceMetadata, validateApiKey, wwwAuthenticate,
+  authorizationServerMetadata, resetAuthorizationServerMetadataCache,
+} = await import("./auth.js");
 
 const now = Math.floor(Date.now() / 1000);
 function jwt(payload: Record<string, unknown>): string {
@@ -105,5 +107,43 @@ describe("validateApiKey with OAuth on", () => {
     globalThis.fetch = vi.fn().mockResolvedValue(new Response("{}", { status: 401 }));
     const result = await validateApiKey(() => "Bearer sk_live_revoked");
     expect(result).toMatchObject({ valid: false, code: "invalid_api_key" });
+  });
+});
+
+describe("authorizationServerMetadata", () => {
+  const issuerDoc = {
+    issuer: "https://localseodata.test",
+    authorization_endpoint: "https://localseodata.test/auth/oauth2/authorize",
+    token_endpoint: "https://localseodata.test/auth/oauth2/token",
+    grant_types_supported: ["authorization_code", "refresh_token"],
+    code_challenge_methods_supported: ["S256"],
+  };
+  const ok = () => vi.fn().mockResolvedValue(new Response(JSON.stringify(issuerDoc), { status: 200 }));
+
+  it("serves the issuer's own document, fetched from the issuer", async () => {
+    resetAuthorizationServerMetadataCache();
+    const fetchFn = ok();
+    expect(await authorizationServerMetadata(fetchFn)).toEqual(issuerDoc);
+    expect(fetchFn.mock.calls[0][0]).toBe("https://localseodata.test/.well-known/oauth-authorization-server");
+  });
+
+  it("caches it, so a client reading it on every connect doesn't hit the issuer each time", async () => {
+    resetAuthorizationServerMetadataCache();
+    const fetchFn = ok();
+    await authorizationServerMetadata(fetchFn);
+    await authorizationServerMetadata(fetchFn);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a document that names a different issuer", async () => {
+    resetAuthorizationServerMetadataCache();
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...issuerDoc, issuer: "https://evil.test" }), { status: 200 }));
+    await expect(authorizationServerMetadata(fetchFn)).rejects.toThrow(/expected https:\/\/localseodata.test/);
+  });
+
+  it("fails when the issuer is down instead of serving nothing useful", async () => {
+    resetAuthorizationServerMetadataCache();
+    const fetchFn = vi.fn().mockResolvedValue(new Response("", { status: 503 }));
+    await expect(authorizationServerMetadata(fetchFn)).rejects.toThrow(/503/);
   });
 });

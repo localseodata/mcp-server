@@ -69,6 +69,39 @@ export function protectedResourceMetadata() {
   };
 }
 
+/**
+ * RFC 8414 authorization server metadata, as published by the issuer.
+ *
+ * Spec-following MCP clients read protectedResourceMetadata() and then fetch
+ * this from the issuer. HubSpot's MCP client skips that step and asks the
+ * MCP host itself for /.well-known/oauth-authorization-server, so the host
+ * serves the issuer's own document: fetched from the issuer, not rebuilt
+ * here, so it can't drift from what the authorization server really does.
+ * Cached for five minutes, like the response headers say.
+ */
+let cachedAuthServerMetadata: { value: Record<string, unknown>; expiresAt: number } | null = null;
+export const AUTH_SERVER_METADATA_TTL_MS = 5 * 60 * 1000;
+
+export async function authorizationServerMetadata(fetchFn: typeof fetch = fetch): Promise<Record<string, unknown>> {
+  const now = Date.now();
+  if (cachedAuthServerMetadata && cachedAuthServerMetadata.expiresAt > now) return cachedAuthServerMetadata.value;
+  const issuer = env.OAUTH_ISSUER.replace(/\/+$/, "");
+  const res = await fetchFn(`${issuer}/.well-known/oauth-authorization-server`, {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`issuer metadata returned ${res.status}`);
+  const value = (await res.json()) as Record<string, unknown>;
+  if (value.issuer !== issuer) throw new Error(`issuer metadata names ${String(value.issuer)}, expected ${issuer}`);
+  cachedAuthServerMetadata = { value, expiresAt: now + AUTH_SERVER_METADATA_TTL_MS };
+  return value;
+}
+
+/** For tests. */
+export function resetAuthorizationServerMetadataCache() {
+  cachedAuthServerMetadata = null;
+}
+
 export async function validateApiKey(getAuth: () => string): Promise<AuthResult> {
   let authHeader: string;
   try {

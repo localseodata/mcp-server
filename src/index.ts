@@ -8,6 +8,7 @@ import {
   validateApiKey,
   oauthChallenge,
   protectedResourceMetadata,
+  authorizationServerMetadata,
   wwwAuthenticate,
 } from "./auth.js";
 
@@ -79,6 +80,22 @@ for (const path of ["/.well-known/oauth-protected-resource", "/.well-known/oauth
     return c.json(protectedResourceMetadata());
   });
 }
+
+// OAuth authorization server metadata (RFC 8414) on the MCP host. HubSpot's
+// MCP client fetches it from the domain root of the MCP URL instead of
+// following authorization_servers above, so serve the issuer's document here.
+app.get("/.well-known/oauth-authorization-server", async (c) => {
+  if (!env.OAUTH_ENABLED) return c.json({ error: "Not found" }, 404);
+  try {
+    const metadata = await authorizationServerMetadata();
+    c.header("Access-Control-Allow-Origin", "*");
+    c.header("Cache-Control", "public, max-age=300");
+    return c.json(metadata);
+  } catch (err) {
+    console.error("[oauth] authorization server metadata unavailable:", err);
+    return c.json({ error: "Authorization server metadata unavailable" }, 502);
+  }
+});
 
 // ─── Raw MCP handler — all /mcp methods go through the SDK transport ────────
 
