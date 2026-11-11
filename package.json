@@ -1,6 +1,6 @@
 {
   "name": "@localseodata/mcp-server",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Model Context Protocol (MCP) server for Local SEO Data: 53 local SEO data tools for AI assistants.",
   "type": "module",
   "license": "MIT",

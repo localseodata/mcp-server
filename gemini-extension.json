@@ -1,0 +1,11 @@
+{
+  "name": "local-seo-data",
+  "version": "1.0.0",
+  "description": "Live local search data from Local SEO Data: Google local pack, Maps and organic rankings, Business Profiles, reviews, local SEO audits, keyword research, geogrid scans and AI visibility. Sign in with your Local SEO Data account on first connect.",
+  "mcpServers": {
+    "localseodata": {
+      "httpUrl": "https://mcp.localseodata.com/mcp"
+    }
+  },
+  "contextFileName": "gemini/GEMINI.md"
+}
