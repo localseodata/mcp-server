@@ -1,0 +1,14 @@
+{
+  "name": "local-seo-data",
+  "version": "1.0.0",
+  "description": "Local SEO Data for Grok Build via the hosted Local SEO Data MCP server at mcp.localseodata.com. Check Google local pack, Maps and organic rankings, pull Business Profiles, reviews and Q&A, run local SEO, citation and reputation audits, research local keywords, scan rankings across a geographic grid and measure brand visibility in AI answers. Sign in with your Local SEO Data account on first connect.",
+  "author": {
+    "name": "Local SEO Data",
+    "url": "https://localseodata.com"
+  },
+  "homepage": "https://localseodata.com/docs/mcp-server",
+  "repository": "https://github.com/localseodata/mcp-server",
+  "license": "MIT",
+  "keywords": ["local seo data", "localseodata", "localseodata.com"],
+  "logo": "assets/logo.png"
+}
