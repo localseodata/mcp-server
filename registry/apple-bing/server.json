@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.localseodata/apple-bing",
+  "title": "Local SEO Data: Apple Maps and Bing Places",
+  "description": "Apple Maps and Bing Places rankings and listing lookups for local businesses.",
+  "repository": {
+    "url": "https://github.com/localseodata/mcp-server",
+    "source": "github"
+  },
+  "version": "1.6.0",
+  "websiteUrl": "https://localseodata.com/docs/mcp-apple-bing",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.localseodata.com/apple-bing/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Send an API key from localseodata.com/dashboard/keys as Bearer sk_live_...",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

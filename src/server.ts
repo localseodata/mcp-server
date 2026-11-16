@@ -19,18 +19,23 @@ import { registerAccountTools } from "./tools/account.js";
 import { AGENT_INSTRUCTIONS } from "./instructions.js";
 import { lenientOutput } from "./lenient-output.js";
 import { MCP_SERVER_VERSION } from "./version.js";
+import { TOOLSETS, type ToolsetSlug } from "./toolsets.js";
 
-export function createMcpServer(getAuth: () => string): McpServer {
+export function createMcpServer(getAuth: () => string, toolset?: ToolsetSlug): McpServer {
+  const focused = toolset ? TOOLSETS[toolset] : undefined;
   const server = new McpServer(
+    focused
+      ? { name: focused.name, title: focused.title, version: MCP_SERVER_VERSION, description: focused.description }
+      : {
+          name: "localseodata",
+          version: MCP_SERVER_VERSION,
+          description: "55 local SEO data tools: rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.",
+        },
     {
-      name: "localseodata",
-      version: MCP_SERVER_VERSION,
-      description: "55 local SEO data tools: rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.",
-    },
-    {
-      instructions: AGENT_INSTRUCTIONS,
+      instructions: focused ? focused.instructions : AGENT_INSTRUCTIONS,
     },
   );
+  const allowed = focused ? new Set(focused.tools) : undefined;
 
   // Every tool's advertised output schema accepts fields it doesn't list
   // (see lenient-output.ts). Applied once here so no tool can opt out by
@@ -40,6 +45,7 @@ export function createMcpServer(getAuth: () => string): McpServer {
     ...args: unknown[]
   ) => {
     const [name, config, ...rest] = args as [unknown, { outputSchema?: unknown }, ...unknown[]];
+    if (allowed && !allowed.has(name as string)) return undefined;
     const outputSchema = config?.outputSchema;
     const lenient =
       outputSchema instanceof z.ZodType

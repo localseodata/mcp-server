@@ -81,6 +81,18 @@ Example configs:
 
 You can create or revoke keys at any time in the [API Keys dashboard](https://localseodata.com/dashboard/keys). Treat a URL that contains your key like a password.
 
+## Focused servers
+
+The same account also works on three smaller servers, each with only the tools for one job. They take an API key (header or `?key=`):
+
+| Server | URL | Tools | Docs |
+|---|---|---|---|
+| Apple Maps and Bing Places | `https://mcp.localseodata.com/apple-bing/mcp` | 6 | [docs](https://localseodata.com/docs/mcp-apple-bing) |
+| AI visibility | `https://mcp.localseodata.com/ai-visibility/mcp` | 17 | [docs](https://localseodata.com/docs/mcp-ai-visibility) |
+| Reviews and reputation | `https://mcp.localseodata.com/reviews/mcp` | 8 | [docs](https://localseodata.com/docs/mcp-reviews) |
+
+Each is listed in the MCP Registry under its own name (`io.github.localseodata/apple-bing`, `.../ai-visibility`, `.../reviews`).
+
 ## Available tools
 
 55 tools in total:
@@ -149,6 +161,8 @@ For clients that launch a local process:
 npm ci && npm run build
 LOCALSEODATA_API_KEY=sk_live_... node dist/stdio.js
 ```
+
+Set `LOCALSEODATA_TOOLSET` to `apple-bing`, `ai-visibility` or `reviews` to run one of the focused servers.
 
 ## Development
 
