@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./server.js";
-import { env, MISSING_KEY_MESSAGE } from "./config.js";
+import { env, MISSING_KEY_MESSAGE, requestToolset } from "./config.js";
 import { ICON_PNG } from "./icon.js";
 import {
   validateApiKey,
@@ -308,7 +308,7 @@ const server = createServer(async (req, res) => {
   // ALL /mcp methods — raw handler (SDK transport owns the response)
   if (isMcp) {
     try {
-      await handleMcpRequest(req, res, toolset);
+      await requestToolset.run(toolset ?? undefined, () => handleMcpRequest(req, res, toolset));
     } catch (err) {
       console.error("MCP handler error:", err);
       if (!res.headersSent) {

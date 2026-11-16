@@ -74,3 +74,11 @@ describe("resolveToolset", () => {
     }
   });
 });
+
+describe("API user agent", () => {
+  it("names the toolset a call came through", async () => {
+    const { internalApiHeaders, requestToolset } = await import("./config.js");
+    expect(internalApiHeaders()["User-Agent"]).toMatch(/^localseodata-mcp\/[\d.]+$/);
+    expect(requestToolset.run("reviews", () => internalApiHeaders()["User-Agent"])).toMatch(/ \(reviews\)$/);
+  });
+});

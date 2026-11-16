@@ -102,7 +102,7 @@ describe("validateApiKey", () => {
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/v1/account/balance"),
       expect.objectContaining({
-        headers: { Authorization: "Bearer sk_live_checkheader" },
+        headers: expect.objectContaining({ Authorization: "Bearer sk_live_checkheader" }),
       })
     );
   });
