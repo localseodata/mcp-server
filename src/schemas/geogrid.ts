@@ -89,3 +89,24 @@ export const geogridStatusDataSchema = geogridScanCompletedDataSchema
     total: z.number().optional(),
     error: z.string().nullable().optional(),
   });
+
+/** A rendered map of a finished scan. */
+export const geogridMapDataSchema = z.object({
+  job_id: z.string(),
+  image_base64: z.string(),
+  mime_type: z.enum(["image/png", "image/webp"]),
+  width: z.number(),
+  height: z.number(),
+  style: z.enum(["light", "dark"]),
+  format: z.enum(["png", "webp"]),
+  business_name: z.string(),
+  keyword: z.string(),
+  /** Average rank with not-found points counted as 21 (ATRP), the number on the map. The scan's
+   *  average_rank counts only points where the business was found. */
+  atrp: z.number(),
+  found: z.number(),
+  points: z.number(),
+  /** The earlier scan the per-point changes are against, or null. */
+  compared_to: z.object({ job_id: z.string(), date: z.string(), atrp: z.number() }).nullable(),
+  attribution: z.string(),
+});

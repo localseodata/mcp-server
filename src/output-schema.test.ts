@@ -74,6 +74,19 @@ describe("advertised output schemas", () => {
     expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
   });
 
+  // Zod 4 converts output schemas with defaulted and z.unknown() fields
+  // listed as required. The API leaves them out (structuredContent is the
+  // raw answer, defaults are never applied to it), so a validating client
+  // would reject the call.
+  it("doesn't require fields the API may leave out", async () => {
+    const tools = await listTools();
+    const required = (name: string) => tools.find((t) => t.name === name).outputSchema.required ?? [];
+    expect(required("ai_overview")).not.toContain("asynchronous_ai_overview");
+    expect(required("business_profile")).not.toContain("hours");
+    const entry = tools.find((t) => t.name === "history_search").outputSchema.properties.entries.items;
+    expect(entry.required).not.toContain("params");
+  });
+
   it("still rejects a response missing a required field", async () => {
     const validate = validatorFor(await listTools(), "page_audit");
     expect(validate({ title: "no score" })).toBe(false);

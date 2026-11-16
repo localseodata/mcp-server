@@ -77,7 +77,7 @@ export function registerPlatformTools(server: McpServer, getAuth: () => string) 
     "apple_business_profile",
     {
       description:
-        "Fetches a business's Apple Maps listing (NAP, rating, categories, coordinates). Use when auditing Apple Business Connect or checking NAP consistency on Apple. matched:false means no Apple listing exists at all. A listing that exists but has claimed:false means it exists and was never claimed in Apple Business Connect — a different, very common finding. claimed:null means unknown, not claimed. Both are results worth reporting, not errors. Check data_source before reporting a website mismatch: a non-empty value (\"yelp\") means Apple ingested the record from that provider, so its website is the provider's page by design. The returned platform_id is Apple's MUID: pass it back as `muid` on later calls to skip the name-resolution search, which drops the cost from 5 credits to 3. Costs 5 credits (3 with muid).",
+        "Fetches a business's Apple Maps listing (NAP, rating, categories, coordinates). Use when auditing Apple Business Connect or checking NAP consistency on Apple. matched:false means no listing under that name came back from Apple's search. That doesn't show the business isn't on Apple Maps: its listing may use a different name, so check apple_maps for the name before reporting it as missing. A listing that exists but has claimed:false means it exists and was never claimed in Apple Business Connect — a different, very common finding. claimed:null means unknown, not claimed. Both are results worth reporting, not errors. Check data_source before reporting a website mismatch: a non-empty value (\"yelp\") means Apple ingested the record from that provider, so its website is the provider's page by design. The returned platform_id is Apple's MUID: pass it back as `muid` on later calls to skip the name-resolution search, which drops the cost from 5 credits to 3. Costs 5 credits (3 with muid).",
       inputSchema: {
         business_name: z.string().describe("Business name"),
         location: z.string().describe('City and state (e.g. "Orchard Park, NY")'),
@@ -106,7 +106,7 @@ export function registerPlatformTools(server: McpServer, getAuth: () => string) 
     "bing_business_profile",
     {
       description:
-        "Fetches a business's Bing Maps listing (NAP, rating, coordinates). Use when auditing Bing Places or checking NAP consistency on Bing. matched:false means no Bing listing was found, which usually means Bing Places was never claimed — a finding, not an error. Costs 3 credits.",
+        "Fetches a business's Bing Maps listing (NAP, rating, coordinates). Use when auditing Bing Places or checking NAP consistency on Bing. matched:false means no listing under that name came back from Bing's search. That doesn't show the business isn't on Bing: its listing may use a different name, so check bing_local for the name before reporting it as missing. Bing gives no claimed signal, so matched:false never shows a listing is unclaimed. Costs 3 credits.",
       inputSchema: {
         business_name: z.string().describe("Business name"),
         location: z.string().describe('City and state (e.g. "Orchard Park, NY")'),

@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { callApi, callApiGet, formatResult, withErrorHandling } from "../api-client.js";
-import { geogridStatusDataSchema } from "../schemas/geogrid.js";
+import { geogridMapDataSchema, geogridStatusDataSchema } from "../schemas/geogrid.js";
 
 const READ_ONLY = {
   readOnlyHint: true,
@@ -17,7 +17,7 @@ export function registerGeogridTools(server: McpServer, getAuth: () => string) {
   server.registerTool(
     "geogrid_scan",
     {
-      description: "Use when mapping where a business ranks across a geographic area. Read-only: it checks public Google Maps rankings at each point of a grid and changes nothing. Ranks count organic listings only (ads are skipped), top 20. Returns: grid (2D array, 0 = not found), grid_points (flat array with row, col, lat, lng, rank, status -- use for map plotting), center, average_rank (ARP), atrp (not found = 21), solv (% of points in the top 3), found_in, failed_points, total_points. Set include_listings to also get the top 20 businesses at every point (competitor analysis). Expensive: 2 cr per point -- 18 cr (3x3), 50 cr (5x5, the default), 98 cr (7x7), 162 cr (9x9); confirm with user first. Points that could not be checked are refunded. Usually takes 30-60 seconds; this tool waits for the result.\n\nIF THE RESULT IS NOT READY IN TIME: a 9x9 can take longer than the wait. You then get a job_id instead of a grid -- fetch the grid with geogrid_status, which is free. Calling geogrid_scan again with the same inputs returns that same lookup at 0 credits rather than running a second one, and a finished grid is cached for 24 hours -- but geogrid_status is the way to get the grid.",
+      description: "Use when mapping where a business ranks across a geographic area. Read-only: it checks public Google Maps rankings at each point of a grid and changes nothing. Ranks count organic listings only (ads are skipped), top 20. Returns: grid (2D array, 0 = not found), grid_points (flat array with row, col, lat, lng, rank, status -- use for map plotting), center, average_rank (ARP), atrp (not found = 21), solv (% of points in the top 3), found_in, failed_points, total_points. Set include_listings to also get the top 20 businesses at every point (competitor analysis). Expensive: 2 cr per point -- 18 cr (3x3), 50 cr (5x5, the default), 98 cr (7x7), 162 cr (9x9); confirm with user first. Points that could not be checked are refunded. Usually takes 30-60 seconds; this tool waits for the result.\n\nIF THE RESULT IS NOT READY IN TIME: a 9x9 can take longer than the wait. You then get a job_id instead of a grid -- fetch the grid with geogrid_status, which is free. Calling geogrid_scan again with the same inputs returns that same lookup at 0 credits rather than running a second one, and a finished grid is cached for 24 hours -- but geogrid_status is the way to get the grid. To show a finished grid to a person, geogrid_map draws it as an image (2 cr).",
       inputSchema: {
         business: z.string().optional().describe("Business name to track. Required unless place_id is given."),
         place_id: z.string().optional().describe("Google Place ID for precise matching (e.g. ChIJ...). When provided, the business is matched by Place ID instead of name, which is far more reliable."),
@@ -121,7 +121,7 @@ export function registerGeogridTools(server: McpServer, getAuth: () => string) {
   server.registerTool(
     "geogrid_status",
     {
-      description: "Collects the grid from a geogrid_scan that returned a job_id instead of a result. FREE -- poll as often as you need.\n\nReturns status \"pending\" or \"running\" while the grid is being searched, \"complete\" with the full grid once done, and \"failed\" with an error if the scan died (it is refunded). Most scans finish inside geogrid_scan itself and never need this; a scan that runs long is the one that does.\n\nPoints that could not be checked have status \"error\" in grid_points, are counted in failed_points, and are refunded.\n\nREADING THE GRID: grid is a 2D array where 0 means the business was not found at that point, not that it ranked zero. average_rank and found_in count only the points where it WAS found, so a strong average_rank across a low found_in means the business ranks well in a small area and is invisible outside it -- which is the finding a geogrid exists to produce.",
+      description: "Collects the grid from a geogrid_scan that returned a job_id instead of a result. FREE -- poll as often as you need.\n\nReturns status \"pending\" or \"running\" while the grid is being searched, \"complete\" with the full grid once done, and \"failed\" with an error if the scan died (it is refunded). Most scans finish inside geogrid_scan itself and never need this; a scan that runs long is the one that does.\n\nPoints that could not be checked have status \"error\" in grid_points, are counted in failed_points, and are refunded.\n\nREADING THE GRID: grid is a 2D array where 0 means the business was not found at that point, not that it ranked zero. average_rank and found_in count only the points where it WAS found, so a strong average_rank across a low found_in means the business ranks well in a small area and is invisible outside it -- which is the finding a geogrid exists to produce. To show this grid to a person, call geogrid_map with the job_id (2 cr).",
       inputSchema: {
         job_id: z.string().min(1).describe("The job_id geogrid_scan returned instead of a grid."),
       },
@@ -136,6 +136,60 @@ export function registerGeogridTools(server: McpServer, getAuth: () => string) {
       return {
         content: [{ type: "text" as const, text: formatResult(result.data, result) }],
         structuredContent: result.data as Record<string, unknown>,
+      };
+    })
+  );
+
+  const MAX_IMAGE_CHARS = 140_000;
+
+  // No outputSchema: the image is already the content block, and repeating
+  // it as structuredContent would double a payload of several hundred KB.
+  server.registerTool(
+    "geogrid_map",
+    {
+      description: "Use after geogrid_scan or geogrid_status returns a completed scan, to get the grid drawn on a street map as an image with the business, keyword and headline numbers on top: one circle per point, numbered with its rank and coloured green (1-3), lime (4-7), orange (8-10), red (11+) or grey (not found). When the caller has scanned the same keyword, business, grid, zoom, radius and centre before, each point shows how many places it moved since that scan and the header shows the average rank change. Shows an agent or a client the whole result at a glance, ready to share. Read-only. 2 cr: confirm with the user before spending. Needs the job_id of a finished scan; a scan still running is refused with nothing charged, so check geogrid_status first. Pass size (600 or 800; default 800), style (light or dark; default light) and compare (false to skip the previous-scan comparison; default true), or compare_to with the job_id of a specific earlier scan of the same keyword, business, grid, zoom, radius and centre, e.g. the first scan of an engagement (history_search, free, finds earlier scans). Map data (c) OpenMapTiles (c) OpenStreetMap contributors -- keep the credit with the image.",
+      inputSchema: {
+        job_id: z.string().min(1).describe("The job_id of a completed geogrid scan (from geogrid_scan or geogrid_status)."),
+        // 1000 is left to the REST endpoint: in chat it can pass the client's size limit after the credits are spent.
+        size: z.union([z.literal(600), z.literal(800)]).optional().describe("Image width and height in pixels: 600 or 800. Default: 800."),
+        style: z.enum(["light", "dark"]).optional().describe("Map theme. Default: light."),
+        compare: z.boolean().optional().describe("Show the change since the previous matching scan, when there is one. Default: true."),
+        compare_to: z.string().optional().describe("job_id of a specific earlier scan of the same keyword, business, grid, zoom, radius and centre to compare against instead, e.g. the first scan of an engagement."),
+      },
+      annotations: { ...READ_ONLY, title: "Geogrid Map Image" },
+    },
+    withErrorHandling(async ({ job_id, size, style, compare, compare_to }) => {
+      // Chat clients cap a tool result (about 150K characters on claude.ai, 25K tokens in Claude Code), so
+      // the image comes back as a 1x WebP: an 800 map is about 50K characters, where a 2x PNG is over 500K.
+      const result = await callApi(
+        "/v1/geogrid/map",
+        {
+          job_id,
+          format: "webp",
+          scale: 1,
+          ...(size && { size }),
+          ...(style && { style }),
+          ...(compare !== undefined && { compare }),
+          ...(compare_to && { compare_to }),
+        },
+        getAuth()
+      );
+      const parsed = geogridMapDataSchema.safeParse(result.data);
+      const credits = `[${result.credits_used} credits used | ${result.credits_remaining} remaining]`;
+      if (!parsed.success) {
+        return { content: [{ type: "text" as const, text: `${credits} The map was drawn but came back in an unexpected shape. Try again or use the REST endpoint /v1/geogrid/map.` }] };
+      }
+      const map = parsed.data;
+      const since = map.compared_to ? ` It was ${map.compared_to.atrp} on ${map.compared_to.date.slice(0, 10)}.` : "";
+      const summary = `${credits} Geogrid map: ${map.business_name}, "${map.keyword}", found at ${map.found}/${map.points} points, average rank ${map.atrp} counting not-found points as 21 (the scan's average_rank counts found points only).${since} ${map.attribution}`;
+      if (map.image_base64.length > MAX_IMAGE_CHARS) {
+        return { content: [{ type: "text" as const, text: `${summary} The image (${Math.round(map.image_base64.length / 1000)}K characters) was too large to return here, and the credits were spent. A size of 600 is the smallest.` }] };
+      }
+      return {
+        content: [
+          { type: "image" as const, data: map.image_base64, mimeType: map.mime_type },
+          { type: "text" as const, text: summary },
+        ],
       };
     })
   );

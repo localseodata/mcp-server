@@ -1,6 +1,6 @@
 # Local SEO Data MCP Server
 
-[Model Context Protocol](https://modelcontextprotocol.io) server for [Local SEO Data](https://localseodata.com). It gives AI assistants 53 local SEO data tools: SERP and map rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.
+[Model Context Protocol](https://modelcontextprotocol.io) server for [Local SEO Data](https://localseodata.com). It gives AI assistants 55 local SEO data tools: SERP and map rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.
 
 Connect once, then ask questions in plain English. Your assistant picks the right tools.
 
@@ -83,7 +83,7 @@ You can create or revoke keys at any time in the [API Keys dashboard](https://lo
 
 ## Available tools
 
-53 tools in total:
+55 tools in total:
 
 | Category | Tools |
 |----------|-------|
@@ -92,10 +92,10 @@ You can create or revoke keys at any time in the [API Keys dashboard](https://lo
 | AI visibility | `ai_mentions`, `ai_visibility`, `ai_compare`, `ai_top_sources`, `ai_top_pages`, `ai_keyword_data`, `ai_llm_response`, `ai_scraper`, `ai_sample`, `ai_sample_status`, `ai_match` |
 | Business data | `business_profile`, `profile_health`, `qa`, `business_listings`, `google_reviews`, `review_velocity`, `multi_platform_reviews` |
 | Keyword research | `search_volume`, `keyword_overview`, `keyword_suggestions`, `related_keywords`, `keywords_for_site`, `keyword_trends` |
-| Audits | `local_audit`, `citation_audit`, `reputation_audit`, `page_audit` |
+| Audits | `local_audit`, `citation_audit`, `citation_audit_status`, `reputation_audit`, `page_audit` |
 | Competitive intel | `competitor_ads`, `brand_mentions`, `backlink_summary`, `backlink_gap` |
 | Reports | `competitor_gap`, `local_authority`, `keyword_opportunities` |
-| Geogrid | `geogrid_scan`, `geogrid_status` |
+| Geogrid | `geogrid_scan`, `geogrid_status`, `geogrid_map` |
 | Locations | `location_search` |
 | Account / utility | `get_balance`, `history_search`, `history_get`, `ping` |
 

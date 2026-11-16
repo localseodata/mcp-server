@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { callApi, withErrorHandling } from "./api-client.js";
+import { callApi, formatResult, withErrorHandling } from "./api-client.js";
 
 function apiError(code: string, message: string, requestId?: string) {
   const suffix = requestId ? ` [request_id: ${requestId}]` : "";
@@ -66,8 +66,8 @@ describe("callApi errors that don't come from our API", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
   }
 
-  it("turns the hosting edge's 502 into a retry message instead of crashing on its body", async () => {
-    // The body the hosting edge returns when the API doesn't answer: it has
+  it("turns Railway's 502 into a retry message instead of crashing on its body", async () => {
+    // The body Railway's edge returns when the API doesn't answer: it has
     // status "error" but no `error` object, which used to throw
     // "Cannot read properties of undefined (reading 'required_credits')".
     respond(502, JSON.stringify({
@@ -85,6 +85,10 @@ describe("callApi errors that don't come from our API", () => {
     }));
     const result = await withErrorHandling(() => callApi("/v1/business/profile", {}, "Bearer sk_live_x") as never)({});
     expect(result.content[0].text).toContain("need 5, have 2");
+    expect(result.content[0].text).toBe(
+      "Not enough credits (need 5, have 2). Pay-as-you-go deposits and monthly plans are at localseodata.com/pricing. [request_id: req_1]"
+    );
+    expect(result.content[0].text).not.toMatch(/billing|checkout/i);
     expect(result.content[0].text).toContain("[request_id: req_1]");
   });
 
@@ -92,5 +96,23 @@ describe("callApi errors that don't come from our API", () => {
     respond(500, "<html>oops</html>");
     const result = await withErrorHandling(() => callApi("/v1/maps", {}, "Bearer sk_live_x") as never)({});
     expect(result.content[0].text).toBe("Error: API returned 500: <html>oops</html>");
+  });
+});
+
+describe("formatResult", () => {
+  it("adds a plain low-balance line, with no link, under 20 credits", () => {
+    const text = formatResult({ ok: true }, { credits_used: 2, credits_remaining: 19, cached: false });
+    expect(text.split("\n").slice(0, 2)).toEqual(["[2 credits used | 19 remaining]", "Balance is low: 19 credits left."]);
+    expect(text).not.toMatch(/https?:|billing|checkout/i);
+  });
+
+  it("says credit, not credits, for one", () => {
+    const text = formatResult({ ok: true }, { credits_used: 2, credits_remaining: 1, cached: false });
+    expect(text).toContain("Balance is low: 1 credit left.");
+  });
+
+  it("stays quiet at 20 credits and above", () => {
+    const text = formatResult({ ok: true }, { credits_used: 2, credits_remaining: 20, cached: false });
+    expect(text).toBe('[2 credits used | 20 remaining]\n\n{\n  "ok": true\n}');
   });
 });

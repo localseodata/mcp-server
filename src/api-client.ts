@@ -1,4 +1,4 @@
-import { env, DASHBOARD_URL, internalApiHeaders } from "./config.js";
+import { env, DASHBOARD_LINK, KEYS_URL, internalApiHeaders } from "./config.js";
 
 interface ApiSuccessResponse {
   status: "success";
@@ -36,7 +36,7 @@ function throwStructuredError(response: ApiErrorResponse): never {
 function parseAndThrowApiError(status: number, text: string): never {
   let parsed: ApiErrorResponse | null = null;
   try { parsed = JSON.parse(text) as ApiErrorResponse; } catch {}
-  // Only our API's errors carry an `error` object. The hosting edge answers a
+  // Only our API's errors carry an `error` object. Railway's edge answers a
   // down or restarting service with its own body ({status: "error", code:
   // 502, message: "Application failed to respond"}), which has none.
   if (parsed?.status === "error" && parsed.error && typeof parsed.error === "object") {
@@ -134,30 +134,39 @@ export async function callApiGet(
   };
 }
 
+/** A fifth of the 100-credit free grant. The server doesn't tell us the user's
+ *  last grant or top-up, so one small fixed line stands in for "under 20%". */
+export const LOW_BALANCE_CREDITS = 20;
+
 export function formatResult(
   data: unknown,
   meta: { credits_used: number; credits_remaining: number; cached: boolean }
 ): string {
   const metaLine = `[${meta.credits_used} credit${meta.credits_used !== 1 ? "s" : ""} used | ${meta.credits_remaining} remaining${meta.cached ? " | cached" : ""}]`;
-  return `${metaLine}\n\n${JSON.stringify(data, null, 2)}`;
+  const left = meta.credits_remaining;
+  const lowBalance =
+    typeof left === "number" && left < LOW_BALANCE_CREDITS ? `\nBalance is low: ${left} credit${left !== 1 ? "s" : ""} left.` : "";
+  return `${metaLine}${lowBalance}\n\n${JSON.stringify(data, null, 2)}`;
 }
 
-type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean; structuredContent?: Record<string, unknown> };
+type ToolResult = {
+  content: ({ type: "text"; text: string } | { type: "image"; data: string; mimeType: string })[];
+  isError?: boolean; structuredContent?: Record<string, unknown> };
 
 const ERROR_MESSAGES: Record<string, (original: string) => string> = {
   insufficient_credits: (msg) => {
     const credits = msg.match(/requires (\d+) credits, balance: (\d+)/);
     return credits
-      ? `Not enough credits (need ${credits[1]}, have ${credits[2]}). Add more at ${DASHBOARD_URL}/billing`
-      : `Not enough credits. Check your balance and add more at ${DASHBOARD_URL}/billing`;
+      ? `Not enough credits (need ${credits[1]}, have ${credits[2]}). Pay-as-you-go deposits and monthly plans are at localseodata.com/pricing.`
+      : `Not enough credits. Pay-as-you-go deposits and monthly plans are at localseodata.com/pricing.`;
   },
   invalid_params: (msg) => `Invalid input: ${msg}. Check the tool description for the right format.`,
   no_results: () => "No results found. Try a different keyword or use the location_search tool to check the location format.",
   rate_limited: () => "Too many requests. Wait a moment and try again.",
   service_unavailable: () => "Local SEO Data didn't respond (it may be restarting). Try again in a minute.",
-  invalid_api_key: () => `Your API key is invalid or has been revoked. Get a new one at ${DASHBOARD_URL}/keys`,
-  expired_api_key: () => `Your API key expired. Get a new one at ${DASHBOARD_URL}/keys`,
-  email_not_verified: () => `Your email isn't verified yet. Check your inbox for the verification link, or resend it from ${DASHBOARD_URL}`,
+  invalid_api_key: () => `Your API key is invalid or has been revoked. Get a new one at ${KEYS_URL}`,
+  expired_api_key: () => `Your API key expired. Get a new one at ${KEYS_URL}`,
+  email_not_verified: () => `Your Local SEO Data email isn't confirmed yet, so this tool can't run. Use the code or link we emailed you, or send a new link from ${DASHBOARD_LINK}, then ask again. Nothing else to set up.`,
   business_not_found: () => "Business not found on Google. Make sure the name matches exactly how it appears on Google Maps.",
   // "The service is down" overclaims — each tool runs its own kind of
   // search, and one family can be degraded while every other tool

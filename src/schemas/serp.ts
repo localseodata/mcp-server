@@ -33,7 +33,14 @@ export const organicDataSchema = z.object({
       // deploy-order compatibility)
       organic_position: z.number().optional(),
       title: z.string(),
+      // May be a google.com/goto redirect: Google wraps many result links,
+      // and the destination can't be read from the link itself.
       url: z.string(),
+      // True when `url` is such a redirect rather than the page itself.
+      url_is_redirect: z.boolean().optional(),
+      // Host of the page the result leads to, redirect or not; null when
+      // the result doesn't say. Match rankings on this, not on `url`.
+      domain: z.string().nullable().optional(),
       snippet: z.string().nullable(),
     })
   ),
@@ -51,6 +58,7 @@ export const organicDataSchema = z.object({
       position: z.string(),
       title: z.string(),
       url: z.string(),
+      domain: z.string().nullable().optional(),
       description: z.string(),
     })
   ),
@@ -226,7 +234,25 @@ export const aiModeDataSchema = z.object({
       position: z.number().optional(),
     })
   ),
-  shopping_items: z.array(z.unknown()),
+  /** Products Google recommended inside the answer, normalized from the
+   *  provider's ai_overview_shopping cards. Empty for most local queries. */
+  shopping_items: z.array(
+    z.object({
+      position: z.number(),
+      title: z.string(),
+      price: z.number().nullable(),
+      price_max: z.number().nullable(),
+      currency: z.string(),
+      price_display: z.string(),
+      rating: z.number().nullable(),
+      reviews_count: z.number(),
+      seller: z.string(),
+      url: z.string(),
+      domain: z.string(),
+      image_url: z.string().nullable(),
+      text: z.string(),
+    })
+  ),
   keyword: z.string(),
   location: z.string(),
   // Geo disclosure contract (optional for deploy-order compatibility)
