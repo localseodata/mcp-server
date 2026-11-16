@@ -75,10 +75,19 @@ describe("resolveToolset", () => {
   });
 });
 
-describe("API user agent", () => {
+describe("per-toolset attribution", () => {
   it("names the toolset a call came through", async () => {
     const { internalApiHeaders, requestToolset } = await import("./config.js");
     expect(internalApiHeaders()["User-Agent"]).toMatch(/^localseodata-mcp\/[\d.]+$/);
     expect(requestToolset.run("reviews", () => internalApiHeaders()["User-Agent"])).toMatch(/ \(reviews\)$/);
+  });
+
+  it("tags signup links with the toolset and points at its own URL", async () => {
+    const { keysUrl, missingKeyMessage, requestToolset } = await import("./config.js");
+    expect(keysUrl()).not.toContain("utm_campaign");
+    requestToolset.run("reviews", () => {
+      expect(keysUrl()).toContain("utm_campaign=reviews");
+      expect(missingKeyMessage()).toContain("mcp.localseodata.com/reviews/mcp?key=");
+    });
   });
 });

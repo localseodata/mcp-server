@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./server.js";
-import { env, MISSING_KEY_MESSAGE, requestToolset } from "./config.js";
+import { env, missingKeyMessage, requestToolset } from "./config.js";
 import { ICON_PNG } from "./icon.js";
 import {
   validateApiKey,
@@ -142,7 +142,7 @@ function extractAuth(req: IncomingMessage): () => string {
   return () => {
     if (queryKey) return `Bearer ${queryKey}`;
     if (authHeader.startsWith("Bearer ")) return authHeader;
-    throw new Error(MISSING_KEY_MESSAGE);
+    throw new Error(missingKeyMessage());
   };
 }
 

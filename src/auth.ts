@@ -1,4 +1,4 @@
-import { env, DASHBOARD_LINK, KEYS_URL, MISSING_KEY_MESSAGE, internalApiHeaders } from "./config.js";
+import { env, dashboardLink, keysUrl, missingKeyMessage, internalApiHeaders } from "./config.js";
 
 export interface AuthResult {
   valid: boolean;
@@ -110,7 +110,7 @@ export async function validateApiKey(getAuth: () => string): Promise<AuthResult>
     return {
       valid: false,
       code: "missing_key",
-      message: MISSING_KEY_MESSAGE,
+      message: missingKeyMessage(),
     };
   }
 
@@ -121,7 +121,7 @@ export async function validateApiKey(getAuth: () => string): Promise<AuthResult>
     return {
       valid: false,
       code: "bad_key_format",
-      message: `That doesn't look like a Local SEO Data API key. Keys start with sk_live_ or sk_test_ — get yours at ${KEYS_URL}`,
+      message: `That doesn't look like a Local SEO Data API key. Keys start with sk_live_ or sk_test_ — get yours at ${keysUrl()}`,
     };
   }
 
@@ -153,7 +153,7 @@ export async function validateApiKey(getAuth: () => string): Promise<AuthResult>
       return {
         valid: false,
         code: code ?? "invalid_api_key",
-        message: `Your API key is invalid or has been revoked. Get a new one at ${KEYS_URL}`,
+        message: `Your API key is invalid or has been revoked. Get a new one at ${keysUrl()}`,
       };
     }
 
@@ -161,14 +161,14 @@ export async function validateApiKey(getAuth: () => string): Promise<AuthResult>
       return {
         valid: false,
         code: "email_not_verified",
-        message: `Your Local SEO Data email isn't confirmed yet, so this tool can't run. Use the code or link we emailed you, or send a new link from ${DASHBOARD_LINK}, then ask again. Nothing else to set up.`,
+        message: `Your Local SEO Data email isn't confirmed yet, so this tool can't run. Use the code or link we emailed you, or send a new link from ${dashboardLink()}, then ask again. Nothing else to set up.`,
       };
     }
 
     return {
       valid: false,
       code: code ?? "auth_failed",
-      message: `Could not validate your API key (${res.status}). Check your key at ${KEYS_URL}`,
+      message: `Could not validate your API key (${res.status}). Check your key at ${keysUrl()}`,
     };
   } catch (err) {
     console.error("[auth] Validation request failed:", err);

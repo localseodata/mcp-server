@@ -1,4 +1,4 @@
-import { env, DASHBOARD_LINK, KEYS_URL, internalApiHeaders } from "./config.js";
+import { env, dashboardLink, keysUrl, internalApiHeaders } from "./config.js";
 
 interface ApiSuccessResponse {
   status: "success";
@@ -164,9 +164,9 @@ const ERROR_MESSAGES: Record<string, (original: string) => string> = {
   no_results: () => "No results found. Try a different keyword or use the location_search tool to check the location format.",
   rate_limited: () => "Too many requests. Wait a moment and try again.",
   service_unavailable: () => "Local SEO Data didn't respond (it may be restarting). Try again in a minute.",
-  invalid_api_key: () => `Your API key is invalid or has been revoked. Get a new one at ${KEYS_URL}`,
-  expired_api_key: () => `Your API key expired. Get a new one at ${KEYS_URL}`,
-  email_not_verified: () => `Your Local SEO Data email isn't confirmed yet, so this tool can't run. Use the code or link we emailed you, or send a new link from ${DASHBOARD_LINK}, then ask again. Nothing else to set up.`,
+  invalid_api_key: () => `Your API key is invalid or has been revoked. Get a new one at ${keysUrl()}`,
+  expired_api_key: () => `Your API key expired. Get a new one at ${keysUrl()}`,
+  email_not_verified: () => `Your Local SEO Data email isn't confirmed yet, so this tool can't run. Use the code or link we emailed you, or send a new link from ${dashboardLink()}, then ask again. Nothing else to set up.`,
   business_not_found: () => "Business not found on Google. Make sure the name matches exactly how it appears on Google Maps.",
   // "The service is down" overclaims — each tool runs its own kind of
   // search, and one family can be degraded while every other tool
