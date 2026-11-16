@@ -89,21 +89,85 @@ export const reputationAuditDataSchema = z.object({
 // required new field would deadlock the deploy that introduces it.
 export const citationAuditDataSchema = z.object({
   consistency_score: z.number().nullable(),
+  // Directories named in the request (or the default set), checked or not.
+  directories_requested: z.number().optional(),
+  // Directories searched to completion; not_found is only ever counted here.
   directories_checked: z.number(),
   found: z.number().optional(),
   consistent: z.number(),
   inconsistent: z.number(),
   unverified: z.number().optional(),
   not_found: z.number(),
+  check_failed: z.number().optional(),
+  unsupported: z.number().optional(),
+  // The industry directory set added to the scan, and where it came from:
+  // the caller (request) or the business's primary Google category.
+  industry: z
+    .object({
+      name: z.string().nullable(),
+      source: z.enum(["request", "google_category", "not_detected"]),
+      google_category: z.string().nullable().optional(),
+    })
+    .optional(),
   details: z.array(
     z.object({
       directory: z.string(),
-      status: z.enum(["consistent", "inconsistent", "unverified", "not_found"]),
+      status: z.enum([
+        "consistent",
+        "inconsistent",
+        "unverified",
+        "not_found",
+        "check_failed",
+        "unsupported",
+        "defunct",
+        "covered_by",
+      ]),
       name_match: z.boolean().nullable(),
       address_match: z.boolean().nullable(),
       phone_match: z.boolean().nullable(),
+      // The listing as the directory shows it, when one was found.
+      listing_url: z.string().optional(),
+      listed_name: z.string().optional(),
+      listed_address: z.string().nullable().optional(),
+      listed_phone: z.string().nullable().optional(),
+      // How the listing was recognised as the business. The previous_* ways
+      // (and a linked listing showing other details) mean it is stale.
+      matched_on: z
+        .enum(["phone", "name_and_address", "website", "previous_phone", "previous_name_and_address", "name_and_city", "linked_listing"])
+        .optional(),
+      stale: z.boolean().optional(),
+      // Further listings of the same business on this directory, usually
+      // duplicates left over from an old name, address or phone.
+      other_listings: z
+        .array(
+          z.object({
+            listing_url: z.string(),
+            listed_name: z.string(),
+            listed_address: z.string().nullable(),
+            listed_phone: z.string().nullable(),
+            name_match: z.boolean(),
+            address_match: z.boolean().nullable(),
+            phone_match: z.boolean().nullable(),
+            matched_on: z.enum(["phone", "name_and_address", "website", "previous_phone", "previous_name_and_address", "name_and_city", "linked_listing"]),
+            stale: z.boolean(),
+          })
+        )
+        .optional(),
       expected_address: z.string().optional(),
       expected_phone: z.string().optional(),
+      // Why a row was not checked, or how to retry it.
+      note: z.string().optional(),
     })
   ),
+});
+
+// A citation audit asked to answer within wait_seconds, and its status
+// endpoint: the full audit once done, or a job to collect it from.
+export const citationAuditJobDataSchema = citationAuditDataSchema.partial().extend({
+  job_id: z.string().optional(),
+  status: z.enum(["running", "complete", "failed"]).optional(),
+  poll_url: z.string().optional(),
+  deduplicated: z.boolean().optional(),
+  credits_charged: z.number().optional(),
+  error: z.string().nullable().optional(),
 });

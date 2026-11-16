@@ -18,13 +18,14 @@ import { registerLocationTools } from "./tools/locations.js";
 import { registerAccountTools } from "./tools/account.js";
 import { AGENT_INSTRUCTIONS } from "./instructions.js";
 import { lenientOutput } from "./lenient-output.js";
+import { MCP_SERVER_VERSION } from "./version.js";
 
 export function createMcpServer(getAuth: () => string): McpServer {
   const server = new McpServer(
     {
       name: "localseodata",
-      version: "1.0.1",
-      description: "53 local SEO data tools: rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.",
+      version: MCP_SERVER_VERSION,
+      description: "55 local SEO data tools: rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.",
     },
     {
       instructions: AGENT_INSTRUCTIONS,

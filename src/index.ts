@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./server.js";
 import { env, MISSING_KEY_MESSAGE } from "./config.js";
+import { ICON_PNG } from "./icon.js";
 import {
   validateApiKey,
   oauthChallenge,
@@ -11,6 +12,7 @@ import {
   authorizationServerMetadata,
   wwwAuthenticate,
 } from "./auth.js";
+import { MCP_SERVER_VERSION } from "./version.js";
 
 // ─── CORS origins shared by both Hono and the raw MCP handler ───────────────
 
@@ -59,7 +61,25 @@ app.use(
 );
 
 // Health check
-app.get("/health", (c) => c.json({ status: "ok", service: "mcp-server" }));
+// Version and deployed commit, so whether a change is live can be checked
+// from outside: curl https://mcp.localseodata.com/health
+app.get("/health", (c) =>
+  c.json({
+    status: "ok",
+    service: "mcp-server",
+    version: MCP_SERVER_VERSION,
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
+  })
+);
+
+// Favicon: what Claude and the MCP directory show for this server.
+for (const path of ["/favicon.ico", "/icon.png"]) {
+  app.get(path, (c) => {
+    c.header("Content-Type", "image/png");
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(new Uint8Array(ICON_PNG));
+  });
+}
 
 // OpenAI plugin submission: domain verification. The portal asks for the
 // exact token as plain text at this path on the MCP host.
@@ -216,7 +236,9 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
 
   if (method === "POST" && body && isInitializeRequest(body)) {
     const authResult = await validateApiKey(getAuth);
-    if (!authResult.valid) {
+    // An unconfirmed email still connects: refusing here makes ChatGPT report a
+    // failed connection with no reason, while each tool call explains what to do.
+    if (!authResult.valid && authResult.code !== "email_not_verified") {
       console.log(`[mcp] Auth rejected on initialize: ${authResult.code} (${describeAuth(getAuth)})`);
       const id = Array.isArray(body)
         ? (body.find((m: any) => m.method === "initialize") as any)?.id ?? null

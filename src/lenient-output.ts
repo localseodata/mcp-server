@@ -17,30 +17,37 @@ export function lenientOutput(schema: z.ZodTypeAny): z.ZodTypeAny {
 }
 
 function rebuild(schema: z.ZodTypeAny): z.ZodTypeAny {
+  // Zod 4 types the children of a schema as the core $ZodType; every schema
+  // built with `z` is also a ZodType, so the casts below are safe.
+  const child = (inner: unknown) => lenientOutput(inner as z.ZodTypeAny);
   if (schema instanceof z.ZodObject) {
     const shape: Record<string, z.ZodTypeAny> = {};
-    for (const [key, value] of Object.entries(schema.shape as Record<string, z.ZodTypeAny>)) {
-      shape[key] = lenientOutput(value);
+    for (const [key, value] of Object.entries(schema.shape)) {
+      // A field that accepts undefined (optional, defaulted, unknown) may be
+      // absent from the answer. Zod 3's converter left such fields out of
+      // `required`; Zod 4 lists defaulted and unknown ones in output mode,
+      // which is how the SDK converts output schemas, so say it explicitly.
+      const rebuilt = child(value);
+      shape[key] = (value as z.ZodTypeAny).safeParse(undefined).success ? rebuilt.optional() : rebuilt;
     }
-    return z.object(shape).passthrough();
+    return z.looseObject(shape);
   }
-  if (schema instanceof z.ZodArray) return z.array(lenientOutput(schema.element));
-  if (schema instanceof z.ZodOptional) return lenientOutput(schema.unwrap()).optional();
-  if (schema instanceof z.ZodNullable) return lenientOutput(schema.unwrap()).nullable();
+  if (schema instanceof z.ZodArray) return z.array(child(schema.element));
+  if (schema instanceof z.ZodOptional) return child(schema.unwrap()).optional();
+  if (schema instanceof z.ZodNullable) return child(schema.unwrap()).nullable();
   if (schema instanceof z.ZodDefault) {
-    return lenientOutput(schema._def.innerType).default(schema._def.defaultValue());
-  }
-  if (schema instanceof z.ZodUnion) {
-    const options = (schema.options as z.ZodTypeAny[]).map(lenientOutput);
-    return z.union(options as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+    return child(schema.unwrap()).default(schema.def.defaultValue);
   }
   if (schema instanceof z.ZodDiscriminatedUnion) {
-    const options = (schema.options as z.ZodTypeAny[]).map(lenientOutput) as z.ZodObject<z.ZodRawShape>[];
-    return z.discriminatedUnion(
-      schema.discriminator,
-      options as [z.ZodObject<z.ZodRawShape>, ...z.ZodObject<z.ZodRawShape>[]]
-    );
+    const options = schema.options.map(child) as z.ZodObject[];
+    return z.discriminatedUnion(schema.def.discriminator, options as [z.ZodObject, ...z.ZodObject[]]);
   }
-  if (schema instanceof z.ZodRecord) return z.record(schema.keySchema, lenientOutput(schema.valueSchema));
+  if (schema instanceof z.ZodUnion) {
+    const options = schema.options.map(child);
+    return z.union(options as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+  }
+  if (schema instanceof z.ZodRecord) {
+    return z.record(schema.keyType as z.ZodString, child(schema.valueType));
+  }
   return schema;
 }

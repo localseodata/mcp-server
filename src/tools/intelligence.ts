@@ -42,7 +42,7 @@ export function registerIntelligenceTools(server: McpServer, getAuth: () => stri
       inputSchema: {
         business_name: z.string().describe("Business name"),
         location: z.string().describe("City and state"),
-        category: z.string().optional().describe("Business category to find keywords for (defaults to business name)"),
+        category: z.string().optional().describe("Business category to find keywords for (defaults to the business's primary Google category)"),
       },
       outputSchema: localOpportunitiesDataSchema,
       annotations: { ...READ_ONLY, title: "Local Keyword Opportunities" },

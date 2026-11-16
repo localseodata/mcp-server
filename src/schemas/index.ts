@@ -34,7 +34,7 @@ import { competitorGapDataSchema, localAuthorityDataSchema, localOpportunitiesDa
 import { balanceDataSchema, usageDataSchema, listKeysDataSchema, createKeyDataSchema, revokeKeyDataSchema,
   historyListDataSchema,
 } from "./account.js";
-import { geogridScanSubmitDataSchema, geogridScanCompletedDataSchema } from "./geogrid.js";
+import { geogridScanSubmitDataSchema, geogridScanCompletedDataSchema, geogridMapDataSchema } from "./geogrid.js";
 import { locationSearchDataSchema } from "./locations.js";
 import { platformSerpDataSchema, platformProfileDataSchema } from "./platforms.js";
 
@@ -123,6 +123,7 @@ export const endpointSchemaMap: Record<string, z.ZodTypeAny> = {
   "/v1/account/keys": listKeysDataSchema,
 
   "/v1/geogrid/scan": geogridScanResponseSchema,
+  "/v1/geogrid/map": geogridMapDataSchema,
 
   "/v1/locations/search": locationSearchDataSchema,
 };

@@ -57,7 +57,7 @@ describe("validateApiKey", () => {
     const result = await validateApiKey(mockGetAuth("Bearer sk_live_unverified"));
     expect(result.valid).toBe(false);
     expect(result.code).toBe("email_not_verified");
-    expect(result.message).toContain("email isn't verified");
+    expect(result.message).toContain("email isn't confirmed");
     expect(result.message).toContain("localseodata.com/dashboard");
   });
 

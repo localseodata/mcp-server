@@ -1,4 +1,4 @@
-export const AGENT_INSTRUCTIONS = `Local SEO Data — 53 local SEO data tools. Rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.
+export const AGENT_INSTRUCTIONS = `Local SEO Data — 55 local SEO data tools. Rankings, reviews, audits, keyword research, competitor analysis, geogrid tracking, and AI visibility scoring.
 
 ## First Steps
 
@@ -9,13 +9,14 @@ export const AGENT_INSTRUCTIONS = `Local SEO Data — 53 local SEO data tools. R
 
 ### Checking rankings?
 - Just the local 3-pack? → local_pack (2 cr)
-- Full SERP with ads, PAA, AI overview? → organic_serp (2 cr)
+- Full SERP with ads, PAA, AI overview? → organic_serp (2 cr, 10 results; depth up to 100 at 16 cr)
 - More than 3 local results with GPS? → maps (2 cr)
 - Extended local results (20+)? → local_finder (2 cr)
 - Google's AI Overview snippet? → ai_overview (2 cr)
 - Full AI Mode response? → ai_mode (2 cr)
 - Google Guaranteed/Screened ads? → local_services_ads (2 cr)
 - Geographic rank heatmap? → geogrid_scan (2 cr per point: 50 cr for the default 5x5, 18-162 cr by grid_size; async, waits for the grid). If it hands back a job_id instead, collect it with geogrid_status (free) rather than scanning again.
+- The finished grid as a shareable map image? → geogrid_map (2 cr; needs a completed scan's job_id)
 
 ### Analyzing a business?
 - Full GBP data (NAP, hours, categories)? → business_profile (5 cr)
@@ -41,7 +42,7 @@ Supports 4 LLMs: ChatGPT, Claude, Gemini, Perplexity. Mention/visibility tools m
 - My domain's overall AI score? → ai_visibility (81 cr, platforms: chat_gpt, google)
 - Compare domains side by side? → ai_compare (81 cr per domain, platforms: chat_gpt, google)
 - What does a specific LLM say? → ai_llm_response (8 cr standard / 20 premium / 40 frontier model, platforms: chat_gpt, claude, gemini, perplexity)
-- Budget AI result scrape? → ai_scraper (4 cr, platforms: chat_gpt, gemini)
+- Budget AI result capture? → ai_scraper (4 cr, platforms: chat_gpt, gemini)
 - How OFTEN does an AI name a business? → ai_sample to submit, then ai_sample_status to collect (samples x 4 cr on chat_gpt/gemini, x 2 on google_ai_mode; the status poll is free)
 - Is the business an AI named the one being tracked? → ai_match (5 cr with the target lookup, 1 cr without)
 - Already asked this before? → history_search then history_get (both free)
@@ -61,7 +62,7 @@ Supports 4 LLMs: ChatGPT, Claude, Gemini, Perplexity. Mention/visibility tools m
 
 ### Comprehensive audits? (expensive, confirm with user first)
 - Full local SEO audit → local_audit (50 cr, async)
-- Citation/NAP consistency → citation_audit (125 cr for all 50 directories; pass directories=20 for 50 cr)
+- Citation/NAP consistency → citation_audit (45-58 cr: 18 core directories plus the business's industry set, e.g. medical, legal, home services; aggregators=["foursquare"] adds 10 cr). If it returns a job_id, collect it with citation_audit_status (free); never re-run it
 - Reputation score → reputation_audit (30 cr)
 - Composite authority score → local_authority (10 cr)
 
@@ -81,7 +82,7 @@ Competitor analysis: competitor_gap → business_listings → backlink_gap (53 c
 Keyword research: keyword_suggestions → search_volume → keyword_trends (173 cr total)
 AI visibility check: ai_visibility → ai_mentions → ai_top_sources (250 cr total)
 Reputation monitor: multi_platform_reviews → review_velocity → brand_mentions (35 cr total)
-Full deep audit: local_audit → citation_audit → geogrid_scan (150-337 cr — confirm first)
+Full deep audit: local_audit → citation_audit → geogrid_scan (118-262 cr — confirm first)
 
 ## Data Notes
 

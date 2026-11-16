@@ -47,16 +47,24 @@ export function registerSerpTools(server: McpServer, getAuth: () => string) {
   server.registerTool(
     "organic_serp",
     {
-      description: "Use when you need the complete Google search results page in one call: organic listings, local pack, ads, People Also Ask, AI overview, LSA ads, and knowledge panel. Best for auditing overall search presence. Costs 2 credits.",
+      description: "Use when you need the complete Google search results page in one call: organic listings, local pack, ads, People Also Ask, AI overview, LSA ads, and knowledge panel. Best for auditing overall search presence. Returns the first 10 organic results by default; set depth (20, 30 ... 100) for deeper pages, in rank order (organic_position 11 is the first result on page two). Costs 2 credits for 10 results, 4 for 20, 8 for 50, 16 for 100.",
       inputSchema: {
         keyword: z.string().describe('Search keyword (e.g. "best plumber near me")'),
         location: z.string().describe('City and state (e.g. "Orchard Park, NY")'),
+        depth: z
+          .number()
+          .int()
+          .min(10)
+          .max(100)
+          .multipleOf(10)
+          .optional()
+          .describe("Organic results to return, in pages of 10: 10 (default), 20, 30 ... 100. Each extra page adds cost."),
       },
       outputSchema: organicDataSchema,
       annotations: { ...READ_ONLY, title: "Full Google SERP" },
     },
-    withErrorHandling(async ({ keyword, location }) => {
-      const result = await callApi("/v1/serp/organic", { keyword, location }, getAuth());
+    withErrorHandling(async ({ keyword, location, depth }) => {
+      const result = await callApi("/v1/serp/organic", { keyword, location, depth }, getAuth());
       return {
         content: [{ type: "text" as const, text: formatResult(result.data, result) }],
         structuredContent: result.data as Record<string, unknown>,
@@ -163,7 +171,7 @@ export function registerSerpTools(server: McpServer, getAuth: () => string) {
   server.registerTool(
     "ai_mode",
     {
-      description: "Use when getting the Google AI Mode (SGE) generated answer for a keyword. Returns ai_response text, local_businesses, reference links, and shopping items. Costs 2 credits. May take 10-30 seconds; Google generates the answer per request.\n\nLOCAL BUSINESSES: on a local question Google recommends businesses inside the answer and we return them as local_businesses — rank, name, category, rating, reviews_count, address, website, domain, cid. Field names shared with /v1/serp/local-pack mean the same things; the sets differ in that this adds category and domain and has no hours. cid is an empty string when the Directions link was unreadable. Two differences from ai_scraper on chat_gpt: phone is always empty (Google renders a Call button and never sends the number), and cid is populated — Google's own identifier for the business, in decimal, which /v1/business/profile also takes. Match on cid rather than on name where you can.\n\nREVIEW COUNTS ARE ROUNDED: Google abbreviates above a thousand, so reviews_count is 1200 where the exact figure is 1194. Do not compare it to a count from another endpoint and read the difference as change.\n\nparse_status reports whether the businesses could be read: \"ok\", \"no_businesses\" when the answer named none, or \"unparsed\" when business cards were present and none could be read — which means Google changed the format. references is unreliable for citations: on some answers it carries real domains, on others every entry collapses to a google.com redirect, and it never names the businesses either way.",
+      description: "Use when getting the Google AI Mode (SGE) generated answer for a keyword. Returns ai_response text, local_businesses, reference links, and shopping_items (products Google recommended: title, price (price_max for a range), rating (0-5), seller, url, domain, image_url, and text, the AI's reason for recommending it). Costs 2 credits. May take 10-30 seconds; Google generates the answer per request.\n\nLOCAL BUSINESSES: on a local question Google recommends businesses inside the answer and we return them as local_businesses — rank, name, category, rating, reviews_count, address, website, domain, cid. Field names shared with /v1/serp/local-pack mean the same things; the sets differ in that this adds category and domain and has no hours. cid is an empty string when the Directions link was unreadable. Two differences from ai_scraper on chat_gpt: phone is always empty (Google renders a Call button and never sends the number), and cid is populated — Google's own identifier for the business, in decimal, which /v1/business/profile also takes. Match on cid rather than on name where you can.\n\nREVIEW COUNTS ARE ROUNDED: Google abbreviates above a thousand, so reviews_count is 1200 where the exact figure is 1194. Do not compare it to a count from another endpoint and read the difference as change.\n\nparse_status reports whether the businesses could be read: \"ok\", \"no_businesses\" when the answer named none, or \"unparsed\" when business cards were present and none could be read — which means Google changed the format. references is unreliable for citations: on some answers it carries real domains, on others every entry collapses to a google.com redirect, and it never names the businesses either way.",
       inputSchema: {
         keyword: z.string().describe('Search keyword (e.g. "best plumber near me")'),
         location: z.string().describe('City and state (e.g. "Orchard Park, NY")'),

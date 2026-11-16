@@ -33,8 +33,6 @@ export const profileHealthDataSchema = z.object({
   completeness_score: z.number(),
   verified: z.boolean(),
   photos_count: z.number(),
-  qa_count: z.number(),
-  posts_last_30d: z.number(),
   missing_fields: z.array(z.string()),
   incomplete_fields: z.array(z.string()),
   recommendations: z.array(z.string()),

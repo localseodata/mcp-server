@@ -80,7 +80,9 @@ const historyEntrySchema = z.object({
   // that included it.
   params: z.unknown(),
   error_code: z.string().nullable(),
-  created_at: z.union([z.string(), z.date()]).nullable(),
+  // An ISO string on the wire: the route's Date is serialized by c.json, and
+  // Zod 4 can't advertise z.date() in a tool's JSON Schema (tools/list throws).
+  created_at: z.string().nullable(),
 });
 
 export const historyListDataSchema = z.object({

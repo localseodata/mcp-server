@@ -29,8 +29,8 @@ export const platformSerpDataSchema = z.object({
   platform: z.enum(["apple", "bing"]),
 });
 
-/** listing is null when the business has no listing on that platform —
- *  an actionable answer (the profile was never claimed), not an error. */
+/** listing is null when no listing under the business's name came back
+ *  from the platform's search — an answer worth reporting, not an error. */
 export const platformProfileDataSchema = z.object({
   matched: z.boolean(),
   platform: z.enum(["apple", "bing"]),

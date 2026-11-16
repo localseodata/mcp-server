@@ -10,6 +10,7 @@ export const googleReviewsDataSchema = z.object({
       author_url: z.string(),
       owner_reply: z.string().nullable(),
       owner_reply_date: z.string().nullable(),
+      owner_reply_time_ago: z.string().nullable().optional(),
     })
   ),
   total_reviews: z.number(),
