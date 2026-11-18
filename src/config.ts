@@ -1,3 +1,6 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import { MCP_SERVER_VERSION } from "./version.js";
+
 function getEnv(key: string, fallback?: string): string {
   const value = process.env[key] ?? fallback;
   if (value === undefined) {
@@ -24,14 +27,33 @@ export const env = {
 } as const;
 
 /** Headers added to every call this server makes to the API. */
+/** The focused toolset serving the current request, if any (see index.ts). */
+export const requestToolset = new AsyncLocalStorage<string | undefined>();
+
 export function internalApiHeaders(): Record<string, string> {
-  return env.MCP_SERVER_SECRET ? { "X-MCP-Server-Secret": env.MCP_SERVER_SECRET } : {};
+  // The API logs the user agent with each request, so calls made through a
+  // focused server can be counted per toolset. Stdio sets the toolset by env.
+  const toolset = requestToolset.getStore() ?? process.env.LOCALSEODATA_TOOLSET;
+  const headers: Record<string, string> = {
+    "User-Agent": `localseodata-mcp/${MCP_SERVER_VERSION}${toolset ? ` (${toolset})` : ""}`,
+  };
+  if (env.MCP_SERVER_SECRET) headers["X-MCP-Server-Secret"] = env.MCP_SERVER_SECRET;
+  return headers;
 }
 
 export const DASHBOARD_URL = "https://localseodata.com/dashboard";
 /** Links in tool and auth messages arrive with no referrer (a terminal, an
- *  agent's chat), so they carry their own source for signup attribution. */
-export const KEYS_URL = `${DASHBOARD_URL}/keys?utm_source=mcp&utm_medium=message`;
-export const DASHBOARD_LINK = `${DASHBOARD_URL}?utm_source=mcp&utm_medium=message`;
+ *  agent's chat), so they carry their own source for signup attribution. A
+ *  focused server adds its toolset as the campaign. */
+function utm(): string {
+  const toolset = requestToolset.getStore() ?? process.env.LOCALSEODATA_TOOLSET;
+  return `utm_source=mcp&utm_medium=message${toolset ? `&utm_campaign=${toolset}` : ""}`;
+}
+export const keysUrl = () => `${DASHBOARD_URL}/keys?${utm()}`;
+export const dashboardLink = () => `${DASHBOARD_URL}?${utm()}`;
 
-export const MISSING_KEY_MESSAGE = `No API key provided. Add your key to the URL like: mcp.localseodata.com/mcp?key=sk_live_xxx — get yours at ${KEYS_URL}`;
+export function missingKeyMessage(): string {
+  const toolset = requestToolset.getStore();
+  const path = toolset ? `${toolset}/mcp` : "mcp";
+  return `No API key provided. Add your key to the URL like: mcp.localseodata.com/${path}?key=sk_live_xxx — get yours at ${keysUrl()}`;
+}

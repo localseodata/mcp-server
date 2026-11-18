@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./server.js";
-import { env, MISSING_KEY_MESSAGE } from "./config.js";
+import { env, missingKeyMessage, requestToolset } from "./config.js";
 import { ICON_PNG } from "./icon.js";
 import {
   validateApiKey,
@@ -13,6 +13,7 @@ import {
   wwwAuthenticate,
 } from "./auth.js";
 import { MCP_SERVER_VERSION } from "./version.js";
+import { TOOLSETS, resolveToolset, type ToolsetSlug } from "./toolsets.js";
 
 // ─── CORS origins shared by both Hono and the raw MCP handler ───────────────
 
@@ -69,6 +70,7 @@ app.get("/health", (c) =>
     service: "mcp-server",
     version: MCP_SERVER_VERSION,
     commit: process.env.RAILWAY_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
+    toolsets: Object.keys(TOOLSETS),
   })
 );
 
@@ -140,7 +142,7 @@ function extractAuth(req: IncomingMessage): () => string {
   return () => {
     if (queryKey) return `Bearer ${queryKey}`;
     if (authHeader.startsWith("Bearer ")) return authHeader;
-    throw new Error(MISSING_KEY_MESSAGE);
+    throw new Error(missingKeyMessage());
   };
 }
 
@@ -184,7 +186,7 @@ function acceptJsonAndSse(req: IncomingMessage) {
   req.headers.accept = value;
 }
 
-async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
+async function handleMcpRequest(req: IncomingMessage, res: ServerResponse, toolset: ToolsetSlug | null) {
   setCorsHeaders(req, res);
 
   const method = req.method ?? "GET";
@@ -205,7 +207,10 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
-  const challenge = oauthChallenge(req.url ?? "/", req.headers.authorization);
+  // OAuth metadata names the full server's URL as the resource, so the
+  // focused servers take API keys only for now. Without a key they get the
+  // usual "no API key" message on initialize instead of a sign-in prompt.
+  const challenge = toolset ? null : oauthChallenge(req.url ?? "/", req.headers.authorization);
   if (challenge) {
     console.log(`[mcp] OAuth challenge (${challenge.includes("invalid_token") ? "expired or malformed token" : "no credential"})`);
     sendUnauthorized(res, challenge, "Authentication required. Connect your Local SEO Data account, or add an API key.");
@@ -257,7 +262,7 @@ async function handleMcpRequest(req: IncomingMessage, res: ServerResponse) {
     }
   }
 
-  const server = createMcpServer(getAuth);
+  const server = createMcpServer(getAuth, toolset ?? undefined);
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless
@@ -283,8 +288,10 @@ const server = createServer(async (req, res) => {
   // The MCP endpoint is /mcp. The bare origin is accepted too: clients that
   // are given https://mcp.localseodata.com still find OAuth (its metadata is
   // at the root), and would otherwise fail every call after sign-in.
+  // Focused servers live at /<toolset>/mcp (see toolsets.ts).
   const pathname = url.split("?")[0];
-  const isMcp = pathname.startsWith("/mcp") || pathname === "/";
+  const toolset = resolveToolset(pathname);
+  const isMcp = toolset !== undefined;
 
   // Handle CORS preflight for /mcp
   if (req.method === "OPTIONS" && isMcp) {
@@ -301,7 +308,7 @@ const server = createServer(async (req, res) => {
   // ALL /mcp methods — raw handler (SDK transport owns the response)
   if (isMcp) {
     try {
-      await handleMcpRequest(req, res);
+      await requestToolset.run(toolset ?? undefined, () => handleMcpRequest(req, res, toolset));
     } catch (err) {
       console.error("MCP handler error:", err);
       if (!res.headersSent) {

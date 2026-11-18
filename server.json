@@ -6,12 +6,12 @@
     "url": "https://github.com/localseodata/mcp-server",
     "source": "github"
   },
-  "version": "1.5.0",
+  "version": "1.6.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@localseodata/mcp-server",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "transport": {
         "type": "streamable-http",
         "url": "https://mcp.localseodata.com/mcp"
